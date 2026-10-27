@@ -19,11 +19,13 @@ def score_risk(ticket: TicketContext, draft: OutboundDraft) -> dict:
     reasons = []
     risk = "Low"
 
-    # Rule 1: Wrong school domain
+    # Rule 1: Wrong domain (any non-matching external domain)
     for domain in draft.recipient_domains:
-        if domain and domain != ticket.requester_domain and "school" in domain.lower():
-            reasons.append(f"Recipient domain '{domain}' does not match expected '{ticket.requester_domain}'")
-            risk = "High"
+        if domain and domain != ticket.requester_domain:
+            # Flag if it looks like an external school/org domain
+            if any(x in domain.lower() for x in ("school", "sch.uk", ".org", ".gov")) or "@" not in domain:
+                reasons.append(f"Recipient domain '{domain}' does not match expected '{ticket.requester_domain}'")
+                risk = "High"
 
     # Rule 2: Attachment for different employee
     for filename in draft.attachment_filenames:
@@ -35,8 +37,11 @@ def score_risk(ticket: TicketContext, draft: OutboundDraft) -> dict:
                 risk = "High" if risk != "High" else risk
 
     # Rule 3: Internal document to external
-    if ticket.is_internal_document and any("school" in d.lower() or "sch.uk" in d.lower() for d in draft.recipient_domains):
-        reasons.append("Internal document being sent to an external school domain")
+    if ticket.is_internal_document and any(
+        "school" in d.lower() or "sch.uk" in d.lower() or d != ticket.requester_domain
+        for d in draft.recipient_domains
+    ):
+        reasons.append("Internal document being sent to an external domain")
         risk = "High"
 
     # Rule 4: Reply-all to unexpected external
