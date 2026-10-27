@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Run the Recipient Guard prototype against sample cases."""
 
+import sys
+from pathlib import Path
+
+# Allow running this script directly without installing the package
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from recipient_guard.guard import TicketContext, OutboundDraft, score_risk
 
 if __name__ == "__main__":
